@@ -13,23 +13,27 @@ type RunStep struct {
 	ended     bool
 }
 
-func New() *RunStep {
+func New(bufcount int) *RunStep {
 	return &RunStep{
 		0,
-		make(chan interface{}),
-		make(chan interface{}),
+		make(chan interface{}, bufcount),
+		make(chan interface{}, bufcount),
 		false,
 	}
 }
 
+// change for shared result ch
+func (fs *RunStep) SetResultCh(ch chan interface{}) {
+	fs.resultCh = ch
+}
+
+// for externel code
 func (fs *RunStep) StartStepCh() chan<- interface{} {
 	return fs.startStep
 }
-
 func (fs *RunStep) ResultCh() <-chan interface{} {
 	return fs.resultCh
 }
-
 func (fs *RunStep) Run(stepfn func(d interface{}) interface{}) {
 	for stepdata := range fs.startStep {
 		fs.resultCh <- stepfn(stepdata)
@@ -39,7 +43,7 @@ func (fs *RunStep) Run(stepfn func(d interface{}) interface{}) {
 
 func (fs *RunStep) Quit() {
 	close(fs.startStep)
-	if len(fs.resultCh) > 0 { // if shared ch
+	if len(fs.resultCh) > 1 { // if shared ch
 		return
 	}
 	for !fs.ended {
@@ -50,7 +54,11 @@ func (fs *RunStep) Quit() {
 	}
 }
 
-// change for shared result ch
-func (fs *RunStep) SetResultCh(ch chan interface{}) {
-	fs.resultCh = ch
+// for embeding struct method
+// use when custom Run method
+func (fs *RunStep) RecvStepArg() interface{} {
+	return <-fs.startStep
+}
+func (fs *RunStep) SendStepResult(d interface{}) {
+	fs.resultCh <- d
 }

@@ -13,7 +13,7 @@ type StepRunObj struct {
 
 func NewStepRunObj() *StepRunObj {
 	aib := &StepRunObj{}
-	aib.RunStep = runstep.New()
+	aib.RunStep = runstep.New(0)
 	return aib
 }
 func (aib *StepRunObj) Step(datain interface{}) interface{} {
