@@ -3,22 +3,22 @@
 package runstep
 
 import (
-// "time"
+	"time"
+
+	"github.com/kasworld/runstate"
 )
 
 type RunStep struct {
-	Dummyint  int // for disk save
 	startStep chan interface{}
 	resultCh  chan interface{}
-	ended     bool
+	rs        *runstate.RunState
 }
 
 func New(bufcount int) *RunStep {
 	return &RunStep{
-		0,
 		make(chan interface{}, bufcount),
 		make(chan interface{}, bufcount),
-		false,
+		runstate.New(),
 	}
 }
 
@@ -36,22 +36,32 @@ func (fs *RunStep) ResultCh() <-chan interface{} {
 }
 func (fs *RunStep) Run(stepfn func(d interface{}) interface{}) {
 	for stepdata := range fs.startStep {
+		if !fs.rs.CanRun() {
+			fs.rs.TryStop()
+			break
+		}
 		fs.resultCh <- stepfn(stepdata)
 	}
-	fs.ended = true
+	fs.rs.SetBit(1)
 }
 
 func (fs *RunStep) Quit() {
-	close(fs.startStep)
-	if len(fs.resultCh) > 1 { // if shared ch
-		return
-	}
-	for !fs.ended {
+	fs.rs.TryStop()
+	time.Sleep(0)
+	for !fs.rs.GetBit(1) {
 		select {
 		case <-fs.resultCh:
 		default:
 		}
+		select {
+		case fs.startStep <- nil:
+		default:
+		}
 	}
+}
+
+func (fs *RunStep) IsQuit() bool {
+	return fs.rs.GetBit(1)
 }
 
 // for embeding struct method
