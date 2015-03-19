@@ -5,5 +5,5 @@ type RunStepI interface {
 	StartStepCh() chan<- interface{}
 	ResultCh() <-chan interface{}
 	Run(stepfn func(d interface{}) interface{})
-	Quit()
+	Stop()
 }

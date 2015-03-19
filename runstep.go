@@ -45,7 +45,7 @@ func (fs *RunStep) Run(stepfn func(d interface{}) interface{}) {
 	fs.rs.SetBit(1)
 }
 
-func (fs *RunStep) Quit() {
+func (fs *RunStep) Stop() {
 	fs.rs.TryStop()
 	time.Sleep(0)
 	for !fs.rs.GetBit(1) {
@@ -60,7 +60,7 @@ func (fs *RunStep) Quit() {
 	}
 }
 
-func (fs *RunStep) IsQuit() bool {
+func (fs *RunStep) IsStopped() bool {
 	return fs.rs.GetBit(1)
 }
 
