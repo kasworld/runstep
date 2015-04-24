@@ -9,16 +9,16 @@ import (
 )
 
 type RunStep struct {
+	*runstate.RunState
 	startStep chan interface{}
 	resultCh  chan interface{}
-	rs        *runstate.RunState
 }
 
 func New(bufcount int) *RunStep {
 	return &RunStep{
-		make(chan interface{}, bufcount),
-		make(chan interface{}, bufcount),
 		runstate.New(),
+		make(chan interface{}, bufcount),
+		make(chan interface{}, bufcount),
 	}
 }
 
@@ -36,19 +36,19 @@ func (fs *RunStep) ResultCh() <-chan interface{} {
 }
 func (fs *RunStep) Run(stepfn func(d interface{}) interface{}) {
 	for stepdata := range fs.startStep {
-		if !fs.rs.CanRun() {
-			fs.rs.TryStop()
+		if !fs.CanRun() {
+			fs.TryStop()
 			break
 		}
 		fs.resultCh <- stepfn(stepdata)
 	}
-	fs.rs.SetBit(1)
+	fs.SetBit(1)
 }
 
 func (fs *RunStep) Stop() {
-	fs.rs.TryStop()
+	fs.TryStop()
 	time.Sleep(0)
-	for !fs.rs.GetBit(1) {
+	for !fs.IsStopped() {
 		select {
 		case <-fs.resultCh:
 		default:
@@ -61,11 +61,13 @@ func (fs *RunStep) Stop() {
 }
 
 func (fs *RunStep) IsStopped() bool {
-	return fs.rs.GetBit(1)
+	return fs.GetBit(1)
 }
 
 // for embeding struct method
 // use when custom Run method
+// not included in runstepi
+
 func (fs *RunStep) RecvStepArg() interface{} {
 	return <-fs.startStep
 }
